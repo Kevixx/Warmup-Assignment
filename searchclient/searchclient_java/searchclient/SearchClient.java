@@ -208,7 +208,7 @@ public class SearchClient
         }
         else
         {
-            System.err.format("Found solution of length %,d.\n", plan.length);
+            System.err.format("Found solution of length %,d.\n ", plan.length);
 
             for (Action[] jointAction : plan)
             {

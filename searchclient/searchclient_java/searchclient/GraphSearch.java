@@ -80,8 +80,6 @@ public class GraphSearch {
                     }                
                     
                 }
-                System.out.println("Expandedz: " + expanded.size() + ", Frontier: " + frontier.size() + ", Generated: " + (expanded.size() + frontier.size()));
-                
             }
         }
     }
