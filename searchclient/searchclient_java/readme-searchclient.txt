@@ -38,4 +38,4 @@ Memory settings:
 Compiling to the target directory:
     $ javac -d target searchclient/*.java
 
-k
+    $ java -jar ../server.jar -l ../levels/MAPF00.lvl -c "java -cp target searchclient.SearchClient" -g -s 150 -t 180
