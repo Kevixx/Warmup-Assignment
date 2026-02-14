@@ -8,7 +8,7 @@ public class GraphSearch {
 
     public static Action[][] search(State initialState, Frontier frontier)
     {
-        boolean outputFixedSolution = true;
+        boolean outputFixedSolution = false;
 
         if (outputFixedSolution) {
             //Part 1:
@@ -54,13 +54,34 @@ public class GraphSearch {
             HashSet<State> expanded = new HashSet<>();
 
             while (true) {
-
+                
                 //Print a status message every 10000 iteration
                 if (++iterations % 10000 == 0) {
                     printSearchStatus(expanded, frontier);
                 }
 
                 //Your code here... Don't forget to print out the stats when a solution has been found (see above)
+                if (frontier.isEmpty()) {
+                    return null;
+                }
+                
+                State state = frontier.pop();
+
+                if(state.isGoalState()) {
+                    printSearchStatus(expanded, frontier);
+                    return state.extractPlan();
+                }
+                else {
+                    expanded.add(state);
+                    for (State s : state.getExpandedStates()) {
+                        if (!expanded.contains(s) && !frontier.contains(s)) {
+                            frontier.add(s);
+                        }
+                    }                
+                    
+                }
+                System.out.println("Expandedz: " + expanded.size() + ", Frontier: " + frontier.size() + ", Generated: " + (expanded.size() + frontier.size()));
+                
             }
         }
     }
