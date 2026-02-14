@@ -64,6 +64,7 @@ class FrontierDFS
 {
     private final ArrayDeque<State> stack = new ArrayDeque<>(65536);
     private final HashSet<State> set = new HashSet<>(65536);
+    
     @Override
     public void add(State state)
     {
