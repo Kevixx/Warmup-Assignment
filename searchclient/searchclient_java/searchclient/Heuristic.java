@@ -5,68 +5,108 @@ import java.util.Comparator;
 public abstract class Heuristic
         implements Comparator<State>
 {
-    protected int goalRow;
-    protected int goalCol;
+        protected int[][][] goalDistances;
+        protected int numAgents;
+
 
     public Heuristic(State initialState)
     {
-             // Find goal position of agent 0
-        for (int r = 0; r < State.goals.length; r++) {
-            for (int c = 0; c < State.goals[r].length; c++) {
-                if (State.goals[r][c] == '0') {
-                    goalRow = r;
-                    goalCol = c;
-                }
+        this.numAgents = initialState.agentRows.length;
+        this.goalDistances = new int[numAgents][][];
+
+        for (int i = 0; i < numAgents; i++)
+        {
+            goalDistances[i] = computeDistancesForAgent(i);
+        }
+    }
+
+private int[][] computeDistancesForAgent(int agent)
+{
+    int rows = State.walls.length;
+    int cols = State.walls[0].length;
+
+    int[][] dist = new int[rows][cols];
+
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++)
+            dist[r][c] = Integer.MAX_VALUE;
+
+    int goalRow = -1;
+    int goalCol = -1;
+
+    // Find this agent's goal
+    for (int r = 0; r < State.goals.length; r++)
+    {
+        for (int c = 0; c < State.goals[r].length; c++)
+        {
+            if (State.goals[r][c] == (char)('0' + agent))
+            {
+                goalRow = r;
+                goalCol = c;
             }
         }
+    }
+
+    java.util.ArrayDeque<int[]> queue = new java.util.ArrayDeque<>();
+    queue.add(new int[]{goalRow, goalCol});
+    dist[goalRow][goalCol] = 0;
+
+    int[] dr = {-1, 1, 0, 0};
+    int[] dc = {0, 0, -1, 1};
+
+    while (!queue.isEmpty())
+    {
+        int[] cell = queue.poll();
+        int r = cell[0];
+        int c = cell[1];
+
+        for (int d = 0; d < 4; d++)
+        {
+            int nr = r + dr[d];
+            int nc = c + dc[d];
+
+            if (nr >= 0 && nr < rows &&
+    nc >= 0 && nc < cols &&
+    !State.walls[nr][nc] &&
+    dist[nr][nc] == Integer.MAX_VALUE)
+
+            {
+                dist[nr][nc] = dist[r][c] + 1;
+                queue.add(new int[]{nr, nc});
+            }
+        }
+    }
+
+    return dist;
 }
 
 
 public int h(State s)
 {
-    int unsatisfiedGoals = 0;
+    int total = 0;
 
-    for (int row = 1; row < State.goals.length - 1; row++)
+    for (int i = 0; i < numAgents; i++)
     {
-        for (int col = 1; col < State.goals[row].length - 1; col++)
-        {
-            char goal = State.goals[row][col];
+        int d = goalDistances[i][s.agentRows[i]][s.agentCols[i]];
 
-            // Agent goal
-            if ('0' <= goal && goal <= '9')
-            {
-                int agent = goal - '0';
-                if (!(s.agentRows[agent] == row && s.agentCols[agent] == col))
-                {
-                    unsatisfiedGoals++;
-                }
-            }
+        if (d == Integer.MAX_VALUE)
+            return Integer.MAX_VALUE; // unreachable
 
-            // Box goal (future-proofing)
-            else if ('A' <= goal && goal <= 'Z')
-            {
-                if (s.boxes[row][col] != goal)
-                {
-                    unsatisfiedGoals++;
-                }
-            }
-        }
+        total += d;
     }
 
-    // Debug printing (for testing small levels only!)
-    // System.err.println("State:\n" + s);
-    // System.err.println("h(s) = " + unsatisfiedGoals);
-    // System.err.println("--------------------");
-
-    return unsatisfiedGoals;
+    return total;
 }
+
+
 
     public abstract int f(State s);
 
     @Override
     public int compare(State s1, State s2)
     {
-        return this.f(s1) - this.f(s2);
+        return Integer.compare(this.f(s1), this.f(s2));
+
     }
 }
 
