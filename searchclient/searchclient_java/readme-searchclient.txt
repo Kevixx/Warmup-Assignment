@@ -34,8 +34,10 @@ Memory settings:
     Note that this option is set for the *client*.
     Avoid setting max heap size too high, since it will lead to your OS doing memory swapping which is terribly slow.
 
+!!!IMPORTANT - WE ARE CURRENTLY USING THESE 2:
 
 Compiling to the target directory:
     $ javac -d target searchclient/*.java
 
+Running using target directory:
     $ java -jar ../server.jar -l ../levels/MAPF00.lvl -c "java -cp target searchclient.SearchClient" -g -s 150 -t 180
