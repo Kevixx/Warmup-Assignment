@@ -9,39 +9,14 @@ public class State
 {
     private static final Random RNG = new Random(1);
 
-    /*
-        The agent rows, columns, and colors are indexed by the agent number.
-        For example, this.agentRows[0] is the row location of agent '0'.
-    */
     public int[] agentRows;
     public int[] agentCols;
     public static Color[] agentColors;
 
-    /*
-        The walls, boxes, and goals arrays are indexed from the top-left of the level, row-major order (row, col).
-               Col 0  Col 1  Col 2  Col 3
-        Row 0: (0,0)  (0,1)  (0,2)  (0,3)  ...
-        Row 1: (1,0)  (1,1)  (1,2)  (1,3)  ...
-        Row 2: (2,0)  (2,1)  (2,2)  (2,3)  ...
-        ...
-
-        For example, this.walls[2] is an array of booleans for the third row.
-        this.walls[row][col] is true if there's a wall at (row, col).
-
-        this.boxes and this.char are two-dimensional arrays of chars.
-        this.boxes[1][2]='A' means there is an A box at (1,2).
-        If there is no box at (1,2), we have this.boxes[1][2]=0 (null character).
-        Simiarly for goals.
-
-    */
     public static boolean[][] walls;
     public char[][] boxes;
     public static char[][] goals;
 
-    /*
-        The box colors are indexed alphabetically. So this.boxColors[0] is the color of A boxes,
-        this.boxColor[1] is the color of B boxes, etc.
-    */
     public static Color[] boxColors;
 
     public final State parent;
@@ -50,12 +25,8 @@ public class State
 
     private int hash = 0;
 
-
-    // Constructs an initial state.
-    // Arguments are not copied, and therefore should not be modified after being passed in.
     public State(int[] agentRows, int[] agentCols, Color[] agentColors, boolean[][] walls,
-                 char[][] boxes, Color[] boxColors, char[][] goals
-    )
+                 char[][] boxes, Color[] boxColors, char[][] goals)
     {
         this.agentRows = agentRows;
         this.agentCols = agentCols;
@@ -69,12 +40,8 @@ public class State
         this.g = 0;
     }
 
-
-    // Constructs the state resulting from applying jointAction in parent.
-    // Precondition: Joint action must be applicable and non-conflicting in parent state.
     private State(State parent, Action[] jointAction)
     {
-        // Copy parent
         this.agentRows = Arrays.copyOf(parent.agentRows, parent.agentRows.length);
         this.agentCols = Arrays.copyOf(parent.agentCols, parent.agentCols.length);
         this.boxes = new char[parent.boxes.length][];
@@ -83,17 +50,18 @@ public class State
             this.boxes[i] = Arrays.copyOf(parent.boxes[i], parent.boxes[i].length);
         }
 
-        // Set own parameters
         this.parent = parent;
         this.jointAction = Arrays.copyOf(jointAction, jointAction.length);
         this.g = parent.g + 1;
 
-        // Apply each action
         int numAgents = this.agentRows.length;
         for (int agent = 0; agent < numAgents; ++agent)
         {
             Action action = jointAction[agent];
             char box;
+
+            int ar = this.agentRows[agent];
+            int ac = this.agentCols[agent];
 
             switch (action.type)
             {
@@ -104,6 +72,43 @@ public class State
                     this.agentRows[agent] += action.agentRowDelta;
                     this.agentCols[agent] += action.agentColDelta;
                     break;
+
+                case Push:
+                {
+                    int boxRow = ar + action.agentRowDelta;
+                    int boxCol = ac + action.agentColDelta;
+
+                    int newBoxRow = boxRow + action.boxRowDelta;
+                    int newBoxCol = boxCol + action.boxColDelta;
+
+                    box = this.boxes[boxRow][boxCol];
+                    this.boxes[boxRow][boxCol] = 0;
+                    this.boxes[newBoxRow][newBoxCol] = box;
+
+                    this.agentRows[agent] += action.agentRowDelta;
+                    this.agentCols[agent] += action.agentColDelta;
+                    break;
+                }
+
+                case Pull:
+                {
+                    int boxRow = ar - action.boxRowDelta;
+                    int boxCol = ac - action.boxColDelta;
+
+                    int newAgentRow = ar + action.agentRowDelta;
+                    int newAgentCol = ac + action.agentColDelta;
+
+                    int newBoxRow = boxRow + action.boxRowDelta;
+                    int newBoxCol = boxCol + action.boxColDelta;
+
+                    box = this.boxes[boxRow][boxCol];
+                    this.boxes[boxRow][boxCol] = 0;
+                    this.boxes[newBoxRow][newBoxCol] = box;
+
+                    this.agentRows[agent] = newAgentRow;
+                    this.agentCols[agent] = newAgentCol;
+                    break;
+                }
             }
         }
     }
@@ -122,14 +127,10 @@ public class State
                 char goal = this.goals[row][col];
 
                 if ('A' <= goal && goal <= 'Z' && this.boxes[row][col] != goal)
-                {
                     return false;
-                }
                 else if ('0' <= goal && goal <= '9' &&
                          !(this.agentRows[goal - '0'] == row && this.agentCols[goal - '0'] == col))
-                {
                     return false;
-                }
             }
         }
         return true;
@@ -139,7 +140,6 @@ public class State
     {
         int numAgents = this.agentRows.length;
 
-        // Determine list of applicable actions for each individual agent.
         Action[][] applicableActions = new Action[numAgents][];
         for (int agent = 0; agent < numAgents; ++agent)
         {
@@ -154,10 +154,10 @@ public class State
             applicableActions[agent] = agentActions.toArray(new Action[0]);
         }
 
-        // Iterate over joint actions, check conflict and generate child states.
         Action[] jointAction = new Action[numAgents];
         int[] actionsPermutation = new int[numAgents];
         ArrayList<State> expandedStates = new ArrayList<>(16);
+
         while (true)
         {
             for (int agent = 0; agent < numAgents; ++agent)
@@ -170,7 +170,6 @@ public class State
                 expandedStates.add(new State(this, jointAction));
             }
 
-            // Advance permutation
             boolean done = false;
             for (int agent = 0; agent < numAgents; ++agent)
             {
@@ -183,17 +182,12 @@ public class State
                 {
                     actionsPermutation[agent] = 0;
                     if (agent == numAgents - 1)
-                    {
                         done = true;
-                    }
                 }
             }
 
-            // Last permutation?
             if (done)
-            {
                 break;
-            }
         }
 
         Collections.shuffle(expandedStates, State.RNG);
@@ -205,87 +199,181 @@ public class State
         int agentRow = this.agentRows[agent];
         int agentCol = this.agentCols[agent];
         Color agentColor = this.agentColors[agent];
-        int boxRow;
-        int boxCol;
-        char box;
-        int destinationRow;
-        int destinationCol;
+
         switch (action.type)
         {
             case NoOp:
                 return true;
 
             case Move:
-                destinationRow = agentRow + action.agentRowDelta;
-                destinationCol = agentCol + action.agentColDelta;
-                return this.cellIsFree(destinationRow, destinationCol);
+                return this.cellIsFree(agentRow + action.agentRowDelta,
+                                       agentCol + action.agentColDelta);
 
+            case Push:
+            {
+                int boxRow = agentRow + action.agentRowDelta;
+                int boxCol = agentCol + action.agentColDelta;
+
+                if (!inBounds(boxRow, boxCol))
+                    return false;
+
+                char box = boxes[boxRow][boxCol];
+                if (box == 0)
+                    return false;
+
+                if (boxColors[box - 'A'] != agentColor)
+                    return false;
+
+                return cellIsFree(boxRow + action.boxRowDelta,
+                                  boxCol + action.boxColDelta);
+            }
+
+            case Pull:
+            {
+                int destRow = agentRow + action.agentRowDelta;
+                int destCol = agentCol + action.agentColDelta;
+
+                if (!cellIsFree(destRow, destCol))
+                    return false;
+
+                int boxRow = agentRow - action.boxRowDelta;
+                int boxCol = agentCol - action.boxColDelta;
+
+                if (!inBounds(boxRow, boxCol))
+                    return false;
+
+                char box = boxes[boxRow][boxCol];
+                if (box == 0)
+                    return false;
+
+                return boxColors[box - 'A'] == agentColor;
+            }
         }
 
-        // Unreachable:
         return false;
     }
 
     private boolean isConflicting(Action[] jointAction)
     {
-        int numAgents = this.agentRows.length;
+        int n = agentRows.length;
 
-        int[] destinationRows = new int[numAgents]; // row of new cell to become occupied by action
-        int[] destinationCols = new int[numAgents]; // column of new cell to become occupied by action
-        int[] boxRows = new int[numAgents]; // current row of box moved by action
-        int[] boxCols = new int[numAgents]; // current column of box moved by action
+        int[] agentDestRow = new int[n];
+        int[] agentDestCol = new int[n];
+        int[] boxSrcRow = new int[n];
+        int[] boxSrcCol = new int[n];
+        int[] boxDestRow = new int[n];
+        int[] boxDestCol = new int[n];
+        boolean[] movesBox = new boolean[n];
 
-        // Collect cells to be occupied and boxes to be moved
-        for (int agent = 0; agent < numAgents; ++agent)
+        for (int i = 0; i < n; i++)
         {
-            Action action = jointAction[agent];
-            int agentRow = this.agentRows[agent];
-            int agentCol = this.agentCols[agent];
-            int boxRow;
-            int boxCol;
+            Action a = jointAction[i];
+            int ar = agentRows[i];
+            int ac = agentCols[i];
 
-            switch (action.type)
+            agentDestRow[i] = ar;
+            agentDestCol[i] = ac;
+
+            switch (a.type)
             {
-                case NoOp:
+                case Move:
+                    agentDestRow[i] = ar + a.agentRowDelta;
+                    agentDestCol[i] = ac + a.agentColDelta;
                     break;
 
-                case Move:
-                    destinationRows[agent] = agentRow + action.agentRowDelta;
-                    destinationCols[agent] = agentCol + action.agentColDelta;
-                    boxRows[agent] = agentRow; // Distinct dummy value
-                    boxCols[agent] = agentCol; // Distinct dummy value
+                case Push:
+                {
+                    int boxRow = ar + a.agentRowDelta;
+                    int boxCol = ac + a.agentColDelta;
+
+                    agentDestRow[i] = boxRow;
+                    agentDestCol[i] = boxCol;
+
+                    boxSrcRow[i] = boxRow;
+                    boxSrcCol[i] = boxCol;
+
+                    boxDestRow[i] = boxRow + a.boxRowDelta;
+                    boxDestCol[i] = boxCol + a.boxColDelta;
+
+                    movesBox[i] = true;
                     break;
-           }
+                }
+
+                case Pull:
+                {
+                    agentDestRow[i] = ar + a.agentRowDelta;
+                    agentDestCol[i] = ac + a.agentColDelta;
+
+                    int boxRow = ar - a.boxRowDelta;
+                    int boxCol = ac - a.boxColDelta;
+
+                    boxSrcRow[i] = boxRow;
+                    boxSrcCol[i] = boxCol;
+
+                    boxDestRow[i] = boxRow + a.boxRowDelta;
+                    boxDestCol[i] = boxCol + a.boxColDelta;
+
+                    movesBox[i] = true;
+                    break;
+                }
+            }
         }
 
-        for (int a1 = 0; a1 < numAgents; ++a1)
+        for (int i = 0; i < n; i++)
         {
-            if (jointAction[a1] == Action.NoOp)
+            for (int j = i + 1; j < n; j++)
             {
-                continue;
-            }
-
-            for (int a2 = a1 + 1; a2 < numAgents; ++a2)
-            {
-                if (jointAction[a2] == Action.NoOp)
-                {
-                    continue;
-                }
-
-                // Moving into same cell?
-                if (destinationRows[a1] == destinationRows[a2] && destinationCols[a1] == destinationCols[a2])
-                {
+                if (agentDestRow[i] == agentDestRow[j] &&
+                    agentDestCol[i] == agentDestCol[j])
                     return true;
-                }
+
+                if (movesBox[i] && movesBox[j] &&
+                    boxDestRow[i] == boxDestRow[j] &&
+                    boxDestCol[i] == boxDestCol[j])
+                    return true;
+
+                if (movesBox[i] && movesBox[j] &&
+                    boxSrcRow[i] == boxSrcRow[j] &&
+                    boxSrcCol[i] == boxSrcCol[j])
+                    return true;
+
+                if (movesBox[j] &&
+                    agentDestRow[i] == boxDestRow[j] &&
+                    agentDestCol[i] == boxDestCol[j])
+                    return true;
+
+                if (movesBox[i] &&
+                    agentDestRow[j] == boxDestRow[i] &&
+                    agentDestCol[j] == boxDestCol[i])
+                    return true;
+
+                if (movesBox[i] &&
+                    boxDestRow[i] == agentRows[j] &&
+                    boxDestCol[i] == agentCols[j])
+                    return true;
+
+                if (movesBox[j] &&
+                    boxDestRow[j] == agentRows[i] &&
+                    boxDestCol[j] == agentCols[i])
+                    return true;
             }
         }
 
         return false;
     }
 
+    private boolean inBounds(int r, int c)
+    {
+        return r >= 0 && r < walls.length &&
+               c >= 0 && c < walls[0].length;
+    }
+
     private boolean cellIsFree(int row, int col)
     {
-        return !this.walls[row][col] && this.boxes[row][col] == 0 && this.agentAt(row, col) == 0;
+        return inBounds(row, col) &&
+               !this.walls[row][col] &&
+               this.boxes[row][col] == 0 &&
+               this.agentAt(row, col) == 0;
     }
 
     private char agentAt(int row, int col)
@@ -331,9 +419,7 @@ public class State
                 {
                     char c = this.boxes[row][col];
                     if (c != 0)
-                    {
                         result = prime * result + (row * this.boxes[row].length + col) * c;
-                    }
                 }
             }
             this.hash = result;
@@ -345,17 +431,11 @@ public class State
     public boolean equals(Object obj)
     {
         if (this == obj)
-        {
             return true;
-        }
         if (obj == null)
-        {
             return false;
-        }
         if (this.getClass() != obj.getClass())
-        {
             return false;
-        }
         State other = (State) obj;
         return Arrays.equals(this.agentRows, other.agentRows) &&
                Arrays.equals(this.agentCols, other.agentCols) &&
@@ -375,21 +455,13 @@ public class State
             for (int col = 0; col < this.walls[row].length; col++)
             {
                 if (this.boxes[row][col] > 0)
-                {
                     s.append(this.boxes[row][col]);
-                }
                 else if (this.walls[row][col])
-                {
                     s.append("+");
-                }
                 else if (this.agentAt(row, col) != 0)
-                {
                     s.append(this.agentAt(row, col));
-                }
                 else
-                {
                     s.append(" ");
-                }
             }
             s.append("\n");
         }
