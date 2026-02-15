@@ -90,25 +90,24 @@ public int h(State s)
 {
     int total = 0;
 
-    for (int i = 0; i < numAgents; i++)
+    for (int r = 0; r < State.goals.length; r++)
     {
-        // If this agent has no goal
-        if (goalDistances[i] == null)
-            continue;
+        for (int c = 0; c < State.goals[r].length; c++)
+        {
+            char goal = State.goals[r][c];
 
-        int d = goalDistances[i][s.agentRows[i]][s.agentCols[i]];
-
-        if (d == Integer.MAX_VALUE)
-            return Integer.MAX_VALUE;
-
-        total += d;
+            if ('A' <= goal && goal <= 'Z')
+            {
+                if (s.boxes[r][c] != goal)
+                {
+                    total++;
+                }
+            }
+        }
     }
 
     return total;
 }
-
-
-
 
     public abstract int f(State s);
 
