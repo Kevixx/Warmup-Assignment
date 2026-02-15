@@ -7,16 +7,30 @@ public abstract class Heuristic
 {
         protected int[][][] goalDistances;
         protected int numAgents;
+        protected int[][][] boxGoalDistances;
+        protected boolean[] boxGoalExists;
+        protected boolean[] agentGoalExists;
 
 
     public Heuristic(State initialState)
     {
         this.numAgents = initialState.agentRows.length;
         this.goalDistances = new int[numAgents][][];
+        this.agentGoalExists = new boolean[numAgents];
 
         for (int i = 0; i < numAgents; i++)
         {
             goalDistances[i] = computeDistancesForAgent(i);
+        }
+
+        int rows = State.walls.length;
+        int cols = State.walls[0].length;
+        this.boxGoalDistances = new int[26][rows][cols];
+        this.boxGoalExists = new boolean[26];
+
+        for (int i = 0; i < 26; i++)
+        {
+            boxGoalDistances[i] = computeDistancesForBoxLetter((char) ('A' + i));
         }
     }
 
@@ -47,10 +61,10 @@ private int[][] computeDistancesForAgent(int agent)
         }
     }
 
-    // If this agent has no goal, return null
-    if (goalRow == -1 || goalCol == -1) {
-        return null;
-    }
+    if (goalRow == -1 || goalCol == -1)
+        return dist;
+
+    this.agentGoalExists[agent] = true;
 
     java.util.ArrayDeque<int[]> queue = new java.util.ArrayDeque<>();
     queue.add(new int[]{goalRow, goalCol});
@@ -85,6 +99,61 @@ private int[][] computeDistancesForAgent(int agent)
     return dist;
 }
 
+private int[][] computeDistancesForBoxLetter(char goalLetter)
+{
+    int rows = State.walls.length;
+    int cols = State.walls[0].length;
+
+    int[][] dist = new int[rows][cols];
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++)
+            dist[r][c] = Integer.MAX_VALUE;
+
+    java.util.ArrayDeque<int[]> queue = new java.util.ArrayDeque<>();
+    for (int r = 0; r < State.goals.length; r++)
+    {
+        for (int c = 0; c < State.goals[r].length; c++)
+        {
+            if (State.goals[r][c] == goalLetter)
+            {
+                dist[r][c] = 0;
+                queue.add(new int[]{r, c});
+                boxGoalExists[goalLetter - 'A'] = true;
+            }
+        }
+    }
+
+    if (!boxGoalExists[goalLetter - 'A'])
+        return dist;
+
+    int[] dr = {-1, 1, 0, 0};
+    int[] dc = {0, 0, -1, 1};
+
+    while (!queue.isEmpty())
+    {
+        int[] cell = queue.poll();
+        int r = cell[0];
+        int c = cell[1];
+
+        for (int d = 0; d < 4; d++)
+        {
+            int nr = r + dr[d];
+            int nc = c + dc[d];
+
+            if (nr >= 0 && nr < rows &&
+                nc >= 0 && nc < cols &&
+                !State.walls[nr][nc] &&
+                dist[nr][nc] == Integer.MAX_VALUE)
+            {
+                dist[nr][nc] = dist[r][c] + 1;
+                queue.add(new int[]{nr, nc});
+            }
+        }
+    }
+
+    return dist;
+}
+
 
 public int h(State s)
 {
@@ -109,6 +178,55 @@ public int h(State s)
     return total;
 }
 
+public int h_(State s)
+{
+    int sumBoxDistances = 0;
+    int sumAgentDistances = 0;
+    int maxBoxDistance = 0;
+    int maxAgentDistance = 0;
+
+    for (int r = 0; r < s.boxes.length; r++)
+    {
+        for (int c = 0; c < s.boxes[r].length; c++)
+        {
+            char box = s.boxes[r][c];
+            if ('A' <= box && box <= 'Z')
+            {
+                int idx = box - 'A';
+                if (!boxGoalExists[idx])
+                    return Integer.MAX_VALUE;
+
+                int d = boxGoalDistances[idx][r][c];
+                if (d == Integer.MAX_VALUE)
+                    return Integer.MAX_VALUE;
+
+                sumBoxDistances += d;
+                if (d > maxBoxDistance)
+                    maxBoxDistance = d;
+            }
+        }
+    }
+
+    for (int i = 0; i < numAgents; i++)
+    {
+        if (!agentGoalExists[i])
+            continue;
+
+        int d = goalDistances[i][s.agentRows[i]][s.agentCols[i]];
+        if (d == Integer.MAX_VALUE)
+            return Integer.MAX_VALUE;
+
+        sumAgentDistances += d;
+        if (d > maxAgentDistance)
+            maxAgentDistance = d;
+    }
+
+    if (numAgents == 1)
+        return sumBoxDistances + sumAgentDistances;
+
+    return Math.max(maxBoxDistance, maxAgentDistance);
+}
+
     public abstract int f(State s);
 
     @Override
@@ -130,7 +248,7 @@ class HeuristicAStar
     @Override
     public int f(State s)
     {
-        return s.g() + this.h(s);
+        return s.g() + this.h_(s);
     }
 
     @Override
@@ -154,7 +272,7 @@ class HeuristicWeightedAStar
     @Override
     public int f(State s)
     {
-        return s.g() + this.w * this.h(s);
+        return s.g() + this.w * this.h_(s);
     }
 
     @Override
@@ -175,7 +293,7 @@ class HeuristicGreedy
     @Override
     public int f(State s)
     {
-        return this.h(s);
+        return this.h_(s);
     }
 
     @Override
