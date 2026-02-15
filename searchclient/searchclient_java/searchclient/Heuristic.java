@@ -46,11 +46,11 @@ private int[][] computeDistancesForAgent(int agent)
             }
         }
     }
-    // If this agent has no goal, return null
-if (goalRow == -1 || goalCol == -1) {
-    return null;
-}
 
+    // If this agent has no goal, return null
+    if (goalRow == -1 || goalCol == -1) {
+        return null;
+    }
 
     java.util.ArrayDeque<int[]> queue = new java.util.ArrayDeque<>();
     queue.add(new int[]{goalRow, goalCol});
@@ -71,9 +71,9 @@ if (goalRow == -1 || goalCol == -1) {
             int nc = c + dc[d];
 
             if (nr >= 0 && nr < rows &&
-    nc >= 0 && nc < cols &&
-    !State.walls[nr][nc] &&
-    dist[nr][nc] == Integer.MAX_VALUE)
+                nc >= 0 && nc < cols &&
+                !State.walls[nr][nc] &&
+                dist[nr][nc] == Integer.MAX_VALUE)
 
             {
                 dist[nr][nc] = dist[r][c] + 1;
