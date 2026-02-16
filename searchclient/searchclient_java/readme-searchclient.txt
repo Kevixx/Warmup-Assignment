@@ -41,3 +41,9 @@ Compiling to the target directory:
 
 Running using target directory:
     $ java -jar ../server.jar -l ../levels/MAPF00.lvl -c "java -cp target searchclient.SearchClient" -g -s 150 -t 180
+
+Running using target directory with 4096.00 MB of memory:
+    $ java -jar ../server.jar -l ../levels/MAPF00.lvl -c "java -Xmx4g -cp target searchclient.SearchClient" -g -s 150 -t 180
+
+Running using target directory with 8GB of memory:
+    $ java -jar ../server.jar -l ../levels/MAPF00.lvl -c "java -Xmx8g -cp target searchclient.SearchClient" -g -s 150 -t 180

@@ -190,7 +190,7 @@ public int hPrime(State s)
         for (int c = 0; c < s.boxes[r].length; c++)
         {
             char box = s.boxes[r][c];
-            if ('A' <= box && box <= 'Z')
+            if ('A' <= box && box <= 'Z' && box != State.goals[r][c])
             {
                 int idx = box - 'A';
                 if (!boxGoalExists[idx])
