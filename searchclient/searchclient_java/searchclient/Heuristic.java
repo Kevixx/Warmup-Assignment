@@ -178,7 +178,7 @@ public int h(State s)
     return total;
 }
 
-public int h_(State s)
+public int hPrime(State s)
 {
     int sumBoxDistances = 0;
     int sumAgentDistances = 0;
@@ -248,7 +248,7 @@ class HeuristicAStar
     @Override
     public int f(State s)
     {
-        return s.g() + this.h_(s);
+        return s.g() + this.hPrime(s);
     }
 
     @Override
@@ -272,7 +272,7 @@ class HeuristicWeightedAStar
     @Override
     public int f(State s)
     {
-        return s.g() + this.w * this.h_(s);
+        return s.g() + this.w * this.hPrime(s);
     }
 
     @Override
@@ -293,7 +293,7 @@ class HeuristicGreedy
     @Override
     public int f(State s)
     {
-        return this.h_(s);
+        return this.hPrime(s);
     }
 
     @Override
